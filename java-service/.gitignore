@@ -37,3 +37,7 @@ build/
 
 ### Environment ###
 .env
+
+### Logs ###
+*.log
+logs/
