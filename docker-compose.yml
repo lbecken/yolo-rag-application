@@ -66,6 +66,25 @@ services:
       #- ./java_cache:/root/.cache
       - maven-cache:/root/.m2
 
+  # Ollama service for local LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - rag-network
+    # GPU support (uncomment if you have NVIDIA GPU)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
 networks:
   rag-network:
     driver: bridge
@@ -74,3 +93,4 @@ volumes:
 #  postgres_data:
 #  python_cache:
   maven-cache:
+  ollama-data:

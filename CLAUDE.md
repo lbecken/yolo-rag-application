@@ -6,7 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Retrieval-Augmented Generation (RAG) application for querying PDF documents using natural language. This is a hybrid microservices architecture with Python handling PDF processing/embeddings and Java Spring Boot orchestrating queries and UI.
 
-**Current Status**: Phase 0 complete (basic infrastructure setup). See README.md for planned phases.
+**Current Status**: Phase 1 complete (local models setup). See README.md for planned phases.
+
+**Phase 1 Achievements**:
+- ✅ Ollama service running in Docker (port 11434)
+- ✅ Embedding model configured: `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
+- ✅ Chat model configured: `llama3.2:3b` via Ollama
+- ✅ Test script available: `python-service/test_models.py`
+- ✅ Model configuration documented: `python-service/model_config.py`
 
 ## Architecture
 
@@ -28,11 +35,18 @@ A Retrieval-Augmented Generation (RAG) application for querying PDF documents us
    - Extension: pgvector enabled
    - Initialized via `infrastructure/init-db.sql`
 
+4. **Ollama** (port 11434): Local LLM inference service
+   - Docker service: `ollama/ollama:latest`
+   - Hosts the chat model: `llama3.2:3b`
+   - API endpoint: `http://ollama:11434` (in Docker) or `http://localhost:11434` (local)
+   - Model storage: `ollama-data` Docker volume
+
 ### Inter-Service Communication
 
 - Java service calls Python service via WebClient (configured in `RagApplication.java`)
 - Python service URL: `http://python-service:8000` (in Docker) or `http://localhost:8000` (local)
-- LLM integration planned via Ollama at `http://localhost:11434` (see `application.properties`)
+- Python service calls Ollama for LLM inference: `http://ollama:11434` (in Docker)
+- All services communicate over the `rag-network` Docker bridge network
 
 ## Development Commands
 
@@ -46,6 +60,7 @@ Services will be available at:
 - Python service: http://localhost:8000 (docs at /docs)
 - Java service: http://localhost:8080
 - PostgreSQL: localhost:5432
+- Ollama: http://localhost:11434 (API at /api)
 
 ### Python Service (Local Development)
 
@@ -93,12 +108,46 @@ Verify pgvector extension:
 docker-compose exec db psql -U raguser -d ragdb -c "SELECT * FROM pg_extension WHERE extname='vector';"
 ```
 
+### Ollama Operations
+
+Pull the chat model:
+```bash
+docker-compose exec ollama ollama pull llama3.2:3b
+```
+
+List available models:
+```bash
+docker-compose exec ollama ollama list
+```
+
+Test Ollama API:
+```bash
+curl http://localhost:11434/api/tags
+```
+
+### Phase 1: Test Models
+
+Test both embedding and chat models:
+```bash
+# Inside Docker container (recommended)
+docker-compose exec python-service python test_models.py
+
+# Or locally if dependencies installed
+cd python-service
+python test_models.py
+```
+
+See `PHASE1_SETUP.md` for detailed Phase 1 setup instructions.
+
 ## Key Configuration Files
 
-- `docker-compose.yml`: Service orchestration with volumes mounted at `./postgres_data` and `./python_cache`
-- `python-service/requirements.txt`: Python dependencies (FastAPI, sentence-transformers, pypdf, etc.)
+- `docker-compose.yml`: Service orchestration with volumes (postgres_data, python_cache, ollama-data, maven-cache)
+- `python-service/model_config.py`: **Model configuration** - embedding and LLM model names, dimensions, parameters
+- `python-service/requirements.txt`: Python dependencies (FastAPI, sentence-transformers, ollama, pypdf, etc.)
+- `python-service/test_models.py`: Test script for Phase 1 model validation
 - `java-service/pom.xml`: Maven dependencies (Spring Boot 3.2, PostgreSQL, WebFlux, PDFBox)
 - `java-service/src/main/resources/application.properties`: All Spring configuration including database credentials and service URLs
+- `PHASE1_SETUP.md`: Detailed Phase 1 setup and testing instructions
 
 ## Important Implementation Notes
 
@@ -120,17 +169,29 @@ Hibernate DDL is set to `update` in `application.properties:12`, which auto-upda
 
 Other volumes:
 - `./postgres_data` for database persistence
-- `./python_cache` for Python model caching
+- `./python_cache` for Python model caching (sentence-transformers)
+- `ollama-data` for Ollama model storage (Docker volume)
+- `maven-cache` for Maven dependencies (Docker volume)
 
-## Planned Features (Not Yet Implemented)
+## Implementation Status
 
-The following are planned but NOT yet implemented:
+### ✅ Completed (Phase 0 & 1)
+- ✅ PostgreSQL with pgvector
+- ✅ Python FastAPI service structure
+- ✅ Java Spring Boot service structure
+- ✅ Docker Compose orchestration
+- ✅ Ollama service for local LLM
+- ✅ Embedding model setup (sentence-transformers/all-MiniLM-L6-v2)
+- ✅ Chat model setup (llama3.2:3b via Ollama)
+- ✅ Model testing scripts and documentation
+
+### 🔄 Planned (Phase 2+)
 - PDF upload and ingestion endpoints
 - Text chunking and embedding generation
-- Vector similarity search
-- LLM integration with Ollama
-- RAG query pipeline
-- Web UI
+- Vector similarity search implementation
+- RAG query pipeline (combining retrieval + generation)
+- Web UI for document upload and queries
+- Query history and result caching
 
 When implementing new features, refer to the phase plan in README.md.
 
@@ -139,3 +200,18 @@ When implementing new features, refer to the phase plan in README.md.
 - Python service: `GET http://localhost:8000/health`
 - Java service: `GET http://localhost:8080/api/health`
 - Spring Actuator: `GET http://localhost:8080/actuator/health`
+- Ollama service: `GET http://localhost:11434/api/tags`
+
+## Model Configuration Reference
+
+All model settings are centralized in `python-service/model_config.py`:
+
+```python
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DIMENSION = 384
+
+LLM_MODEL_NAME = "llama3.2:3b"
+OLLAMA_BASE_URL = "http://ollama:11434"
+```
+
+**IMPORTANT**: Keep these consistent throughout the application to ensure embeddings match vector dimensions in the database.

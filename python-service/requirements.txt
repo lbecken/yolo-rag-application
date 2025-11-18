@@ -11,3 +11,4 @@ faiss-cpu==1.7.4
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.23
 python-dotenv==1.0.0
+ollama==0.1.6
