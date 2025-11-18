@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL with pgvector extension
   db:
@@ -12,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
       - ./infrastructure/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - rag-network
@@ -39,7 +37,7 @@ services:
       - rag-network
     volumes:
       - ./python-service:/app
-      - python_cache:/root/.cache
+      - ./python_cache:/root/.cache
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   # Java Spring Boot service for RAG queries and UI
@@ -69,6 +67,6 @@ networks:
   rag-network:
     driver: bridge
 
-volumes:
-  postgres_data:
-  python_cache:
+#volumes:
+#  postgres_data:
+#  python_cache:
