@@ -1,5 +1,6 @@
 package com.rag.app.controller;
 
+import com.rag.app.client.EmbeddingClient;
 import com.rag.app.model.Chunk;
 import com.rag.app.model.Document;
 import com.rag.app.repository.ChunkRepository;
@@ -23,6 +24,7 @@ public class VectorTestController {
 
     private final DocumentRepository documentRepository;
     private final ChunkRepository chunkRepository;
+    private final EmbeddingClient embeddingClient;
 
     /**
      * Initialize test data: Create a sample document with chunks and embeddings
@@ -221,6 +223,134 @@ public class VectorTestController {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    // ==================== Phase 5 Test Endpoints ====================
+
+    /**
+     * Test the EmbeddingClient by embedding a single text.
+     * Demonstrates calling Python /embed endpoint from Java.
+     */
+    @PostMapping("/embed")
+    public ResponseEntity<Map<String, Object>> testEmbed(@RequestParam(defaultValue = "What is machine learning?") String text) {
+        log.info("Testing EmbeddingClient with text: {}", text);
+
+        try {
+            float[] embedding = embeddingClient.embedSingle(text);
+            String vectorStr = EmbeddingClient.toPgVectorFormat(embedding);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("text", text);
+            response.put("dimension", embedding.length);
+            response.put("embeddingPreview", vectorStr.substring(0, Math.min(100, vectorStr.length())) + "...");
+            response.put("embeddingFull", vectorStr);
+
+            log.info("Successfully generated embedding with {} dimensions", embedding.length);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Failed to generate embedding: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", e.getMessage(),
+                    "text", text
+            ));
+        }
+    }
+
+    /**
+     * Test the full Phase 5 flow:
+     * 1. Embed query text using EmbeddingClient
+     * 2. Search for similar chunks using findNearestChunks
+     *
+     * This demonstrates the complete RAG retrieval pipeline.
+     */
+    @PostMapping("/semantic-search")
+    public ResponseEntity<Map<String, Object>> testSemanticSearch(
+            @RequestParam(defaultValue = "How do neural networks work?") String query,
+            @RequestParam(defaultValue = "5") int limit) {
+        log.info("Testing semantic search with query: '{}', limit: {}", query, limit);
+
+        try {
+            // Step 1: Generate embedding for the query
+            float[] queryEmbedding = embeddingClient.embedSingle(query);
+            String vectorStr = EmbeddingClient.toPgVectorFormat(queryEmbedding);
+
+            // Step 2: Get all document IDs (in a real app, you might filter these)
+            List<Long> documentIds = documentRepository.findAll().stream()
+                    .map(Document::getId)
+                    .toList();
+
+            if (documentIds.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                        "message", "No documents in database. Run /api/test/vector/init first.",
+                        "query", query
+                ));
+            }
+
+            // Step 3: Search for similar chunks
+            List<Chunk> similarChunks = chunkRepository.findNearestChunks(documentIds, vectorStr, limit);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("query", query);
+            response.put("embeddingDimension", queryEmbedding.length);
+            response.put("documentsSearched", documentIds.size());
+            response.put("resultsCount", similarChunks.size());
+            response.put("results", similarChunks.stream().map(chunk -> {
+                Map<String, Object> chunkInfo = new HashMap<>();
+                chunkInfo.put("id", chunk.getId());
+                chunkInfo.put("documentId", chunk.getDocument().getId());
+                chunkInfo.put("documentTitle", chunk.getDocument().getTitle());
+                chunkInfo.put("text", chunk.getText());
+                chunkInfo.put("chunkIndex", chunk.getChunkIndex());
+                chunkInfo.put("pageStart", chunk.getPageStart());
+                chunkInfo.put("pageEnd", chunk.getPageEnd());
+                return chunkInfo;
+            }).toList());
+
+            log.info("Found {} similar chunks for query", similarChunks.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Semantic search failed: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", e.getMessage(),
+                    "query", query
+            ));
+        }
+    }
+
+    /**
+     * Test findTopKSimilarChunks with real embeddings (search all documents)
+     */
+    @PostMapping("/search-all")
+    public ResponseEntity<Map<String, Object>> testSearchAll(
+            @RequestParam(defaultValue = "artificial intelligence") String query,
+            @RequestParam(defaultValue = "3") int limit) {
+        log.info("Testing search-all with query: '{}', limit: {}", query, limit);
+
+        try {
+            float[] queryEmbedding = embeddingClient.embedSingle(query);
+            String vectorStr = EmbeddingClient.toPgVectorFormat(queryEmbedding);
+
+            List<Chunk> similarChunks = chunkRepository.findTopKSimilarChunks(vectorStr, limit);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("query", query);
+            response.put("limit", limit);
+            response.put("resultsCount", similarChunks.size());
+            response.put("results", similarChunks.stream().map(chunk -> Map.of(
+                    "id", chunk.getId(),
+                    "documentId", chunk.getDocument().getId(),
+                    "text", chunk.getText(),
+                    "chunkIndex", chunk.getChunkIndex()
+            )).toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Search-all failed: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", e.getMessage(),
+                    "query", query
+            ));
+        }
     }
 
     /**
