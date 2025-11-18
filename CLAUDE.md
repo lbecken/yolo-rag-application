@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Retrieval-Augmented Generation (RAG) application for querying PDF documents using natural language. This is a hybrid microservices architecture with Python handling PDF processing/embeddings and Java Spring Boot orchestrating queries and UI.
 
-**Current Status**: Phase 1 complete (local models setup). See README.md for planned phases.
+**Current Status**: Phase 2 complete (database schema & pgvector integration). See README.md for planned phases.
 
 **Phase 1 Achievements**:
 - ✅ Ollama service running in Docker (port 11434)
@@ -14,6 +14,16 @@ A Retrieval-Augmented Generation (RAG) application for querying PDF documents us
 - ✅ Chat model configured: `llama3.2:3b` via Ollama
 - ✅ Test script available: `python-service/test_models.py`
 - ✅ Model configuration documented: `python-service/model_config.py`
+
+**Phase 2 Achievements**:
+- ✅ Flyway database migrations configured and implemented
+- ✅ `documents` table created with indexes
+- ✅ `chunks` table created with pgvector support (384-dimensional embeddings)
+- ✅ HNSW index on embeddings for fast vector similarity search
+- ✅ JPA entities and repositories for documents and chunks
+- ✅ Vector similarity search queries implemented
+- ✅ Test controller for verifying vector operations
+- ✅ Documentation: `PHASE2_SCHEMA.md`
 
 ## Architecture
 
@@ -139,15 +149,40 @@ python test_models.py
 
 See `PHASE1_SETUP.md` for detailed Phase 1 setup instructions.
 
+### Phase 2: Test Vector Operations
+
+Verify database schema and vector similarity search:
+
+```bash
+# Check Flyway migration status
+docker-compose exec db psql -U raguser -d ragdb -c "SELECT version, description, success FROM flyway_schema_history;"
+
+# Verify tables and vector column
+docker-compose exec db psql -U raguser -d ragdb -c "\d chunks"
+
+# Initialize test data via REST API
+curl -X POST http://localhost:8080/api/test/vector/init
+
+# Test vector similarity search
+curl -X POST "http://localhost:8080/api/test/vector/search?limit=3"
+
+# Clear test data
+curl -X DELETE http://localhost:8080/api/test/vector/clear
+```
+
+See `PHASE2_SCHEMA.md` for detailed Phase 2 setup and testing instructions.
+
 ## Key Configuration Files
 
 - `docker-compose.yml`: Service orchestration with volumes (postgres_data, python_cache, ollama-data, maven-cache)
 - `python-service/model_config.py`: **Model configuration** - embedding and LLM model names, dimensions, parameters
 - `python-service/requirements.txt`: Python dependencies (FastAPI, sentence-transformers, ollama, pypdf, etc.)
 - `python-service/test_models.py`: Test script for Phase 1 model validation
-- `java-service/pom.xml`: Maven dependencies (Spring Boot 3.2, PostgreSQL, WebFlux, PDFBox)
-- `java-service/src/main/resources/application.properties`: All Spring configuration including database credentials and service URLs
+- `java-service/pom.xml`: Maven dependencies (Spring Boot 3.2, PostgreSQL, WebFlux, PDFBox, Flyway)
+- `java-service/src/main/resources/application.properties`: All Spring configuration including database credentials, service URLs, and Flyway settings
+- `java-service/src/main/resources/db/migration/`: Flyway migration scripts for database schema
 - `PHASE1_SETUP.md`: Detailed Phase 1 setup and testing instructions
+- `PHASE2_SCHEMA.md`: Detailed Phase 2 database schema and testing instructions
 
 ## Important Implementation Notes
 
@@ -158,7 +193,7 @@ The database is configured for 384-dimensional embeddings (matching sentence-tra
 Python service has CORS enabled for all origins in `main.py:24-30`. In production, this should be restricted to specific origins.
 
 ### JPA Configuration
-Hibernate DDL is set to `update` in `application.properties:12`, which auto-updates schema. For production, use migrations (Flyway/Liquibase).
+Hibernate DDL is set to `validate` in `application.properties:12`. Database schema is managed by Flyway migrations in `java-service/src/main/resources/db/migration/`. This ensures version-controlled, reproducible schema changes.
 
 ### Docker Volumes and Java Service
 **IMPORTANT**: The Java service does NOT have a volume mount (unlike the Python service). This is intentional:
@@ -175,7 +210,7 @@ Other volumes:
 
 ## Implementation Status
 
-### ✅ Completed (Phase 0 & 1)
+### ✅ Completed (Phase 0, 1 & 2)
 - ✅ PostgreSQL with pgvector
 - ✅ Python FastAPI service structure
 - ✅ Java Spring Boot service structure
@@ -184,11 +219,16 @@ Other volumes:
 - ✅ Embedding model setup (sentence-transformers/all-MiniLM-L6-v2)
 - ✅ Chat model setup (llama3.2:3b via Ollama)
 - ✅ Model testing scripts and documentation
+- ✅ Flyway database migrations
+- ✅ Documents and chunks database schema
+- ✅ HNSW index for vector similarity search
+- ✅ JPA entities and repositories
+- ✅ Vector similarity search queries
+- ✅ Vector operations test controller
 
-### 🔄 Planned (Phase 2+)
+### 🔄 Planned (Phase 3+)
 - PDF upload and ingestion endpoints
 - Text chunking and embedding generation
-- Vector similarity search implementation
 - RAG query pipeline (combining retrieval + generation)
 - Web UI for document upload and queries
 - Query history and result caching
