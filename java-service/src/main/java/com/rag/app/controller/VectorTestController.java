@@ -48,7 +48,7 @@ public class VectorTestController {
                 .pageEnd(0)
                 .chunkIndex(0)
                 .build();
-        chunk1.setEmbeddingArray(generateSyntheticEmbedding(1));
+        chunk1.setEmbedding(generateSyntheticEmbedding(1));
         document.addChunk(chunk1);
         chunks.add(chunk1);
 
@@ -59,7 +59,7 @@ public class VectorTestController {
                 .pageEnd(0)
                 .chunkIndex(1)
                 .build();
-        chunk2.setEmbeddingArray(generateSyntheticEmbedding(2));
+        chunk2.setEmbedding(generateSyntheticEmbedding(2));
         document.addChunk(chunk2);
         chunks.add(chunk2);
 
@@ -70,7 +70,7 @@ public class VectorTestController {
                 .pageEnd(1)
                 .chunkIndex(2)
                 .build();
-        chunk3.setEmbeddingArray(generateSyntheticEmbedding(3));
+        chunk3.setEmbedding(generateSyntheticEmbedding(3));
         document.addChunk(chunk3);
         chunks.add(chunk3);
 
@@ -81,7 +81,7 @@ public class VectorTestController {
                 .pageEnd(1)
                 .chunkIndex(3)
                 .build();
-        chunk4.setEmbeddingArray(generateSyntheticEmbedding(4));
+        chunk4.setEmbedding(generateSyntheticEmbedding(4));
         document.addChunk(chunk4);
         chunks.add(chunk4);
 
@@ -111,7 +111,7 @@ public class VectorTestController {
 
         // Create a query embedding similar to chunk 2 (deep learning)
         float[] queryEmbedding = generateSyntheticEmbedding(2);
-        String queryEmbeddingStr = Chunk.embeddingToString(queryEmbedding);
+        String queryEmbeddingStr = embeddingToString(queryEmbedding);
 
         // Search for similar chunks
         List<Chunk> similarChunks = chunkRepository.findTopKSimilarChunks(queryEmbeddingStr, limit);
@@ -147,7 +147,7 @@ public class VectorTestController {
                 "documentId", chunk.getDocument().getId(),
                 "text", chunk.getText(),
                 "chunkIndex", chunk.getChunkIndex(),
-                "embeddingDimension", chunk.getEmbeddingArray().length
+                "embeddingDimension", chunk.getEmbedding().length
         )).toList());
 
         return ResponseEntity.ok(response);
@@ -202,6 +202,25 @@ public class VectorTestController {
         }
 
         return embedding;
+    }
+
+    /**
+     * Helper method to convert float array to pgvector string format for queries.
+     * This is needed for the repository query parameter.
+     */
+    private String embeddingToString(float[] embedding) {
+        if (embedding == null || embedding.length == 0) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < embedding.length; i++) {
+            if (i > 0) {
+                sb.append(",");
+            }
+            sb.append(embedding[i]);
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     /**

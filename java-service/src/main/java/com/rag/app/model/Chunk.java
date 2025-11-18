@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 
@@ -42,11 +43,11 @@ public class Chunk {
 
     /**
      * The embedding vector stored as a pgvector type.
-     * We store it as a String in PostgreSQL's vector format: '[0.1, 0.2, ...]'
-     * and convert to/from float[] in the application layer.
+     * Hibernate uses VectorType to convert between float[] and PostgreSQL vector type.
      */
     @Column(name = "embedding", nullable = false, columnDefinition = "vector(384)")
-    private String embedding;
+    @Type(VectorType.class)
+    private float[] embedding;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -61,52 +62,6 @@ public class Chunk {
         }
     }
 
-    /**
-     * Convert a float array to pgvector string format: '[0.1, 0.2, ...]'
-     */
-    public static String embeddingToString(float[] embedding) {
-        if (embedding == null || embedding.length == 0) {
-            return null;
-        }
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < embedding.length; i++) {
-            if (i > 0) {
-                sb.append(",");
-            }
-            sb.append(embedding[i]);
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    /**
-     * Convert a pgvector string format to float array
-     */
-    public static float[] stringToEmbedding(String embeddingStr) {
-        if (embeddingStr == null || embeddingStr.isEmpty()) {
-            return null;
-        }
-        // Remove brackets and split by comma
-        String cleaned = embeddingStr.replaceAll("[\\[\\] ]", "");
-        String[] parts = cleaned.split(",");
-        float[] result = new float[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            result[i] = Float.parseFloat(parts[i]);
-        }
-        return result;
-    }
-
-    /**
-     * Get embedding as float array
-     */
-    public float[] getEmbeddingArray() {
-        return stringToEmbedding(this.embedding);
-    }
-
-    /**
-     * Set embedding from float array
-     */
-    public void setEmbeddingArray(float[] embeddingArray) {
-        this.embedding = embeddingToString(embeddingArray);
-    }
+    // Note: VectorType handles conversion between float[] and PostgreSQL vector automatically
+    // No need for manual conversion methods anymore
 }
