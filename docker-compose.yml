@@ -60,8 +60,8 @@ services:
         condition: service_started
     networks:
       - rag-network
-    volumes:
-      - ./java-service:/app
+    # Note: Volume mount removed for Java service since it's a compiled application
+    # For development, rebuild with: docker compose build java-service && docker compose up -d
 
 networks:
   rag-network:

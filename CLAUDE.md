@@ -111,11 +111,16 @@ Python service has CORS enabled for all origins in `main.py:24-30`. In productio
 ### JPA Configuration
 Hibernate DDL is set to `update` in `application.properties:12`, which auto-updates schema. For production, use migrations (Flyway/Liquibase).
 
-### Docker Volumes
-Volumes are mounted as local directories (not Docker volumes) for easier debugging:
+### Docker Volumes and Java Service
+**IMPORTANT**: The Java service does NOT have a volume mount (unlike the Python service). This is intentional:
+- Python service: Has `./python-service:/app` mount for hot-reload during development
+- Java service: No volume mount because it uses a compiled JAR file that gets baked into the image
+- When you modify Java code, rebuild with: `docker compose build java-service && docker compose up -d`
+- DO NOT add a volume mount like `./java-service:/app` to the Java service - this will overwrite the compiled JAR and break the service
+
+Other volumes:
 - `./postgres_data` for database persistence
 - `./python_cache` for Python model caching
-- Both service directories mounted for hot-reload in development
 
 ## Planned Features (Not Yet Implemented)
 
