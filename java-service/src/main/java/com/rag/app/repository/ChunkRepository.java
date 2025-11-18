@@ -88,4 +88,28 @@ public interface ChunkRepository extends JpaRepository<Chunk, Long> {
         @Param("threshold") double threshold,
         @Param("limit") int limit
     );
+
+    /**
+     * Find the top K nearest chunks from specific documents using cosine distance.
+     *
+     * This method filters chunks by a list of document IDs and returns the most
+     * similar chunks based on vector similarity.
+     *
+     * @param documentIds List of document IDs to search within
+     * @param embeddingVector The query embedding in pgvector format: '[0.1, 0.2, ...]'
+     * @param limit Maximum number of results to return (k)
+     * @return List of chunks ordered by similarity (most similar first)
+     */
+    @Query(value = """
+        SELECT c.*
+        FROM chunks c
+        WHERE c.document_id IN :documentIds
+        ORDER BY c.embedding <-> CAST(:embeddingVector AS vector)
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<Chunk> findNearestChunks(
+        @Param("documentIds") List<Long> documentIds,
+        @Param("embeddingVector") String embeddingVector,
+        @Param("limit") int limit
+    );
 }
