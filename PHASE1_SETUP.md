@@ -185,6 +185,14 @@ Model Configuration:
 You can now proceed to Phase 2: PDF Ingestion.
 ```
 
+## Usage 
+
+Users can now: 
+1. Start all services: `docker compose up -d` 
+2. Pull chat model: `docker compose exec ollama ollama pull llama3.2:3b` 
+3. Run tests: `docker compose exec python-service python test_models.py` 
+
+
 ## Troubleshooting
 
 ### Ollama Connection Issues
