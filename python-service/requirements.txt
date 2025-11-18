@@ -4,8 +4,9 @@ pydantic==2.5.0
 python-multipart==0.0.6
 pypdf==3.17.1
 pdfplumber==0.10.3
-sentence-transformers==2.2.2
+sentence-transformers==2.5.1
 torch==2.1.1
+transformers==4.35.2
 numpy==1.26.2
 faiss-cpu==1.7.4
 psycopg2-binary==2.9.9
