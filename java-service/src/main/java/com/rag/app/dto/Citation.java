@@ -1,18 +1,18 @@
-package com.yolo.rag.dto;
+package com.rag.app.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class QaResponse {
+public class Citation {
 
-    private String answer;
-    private List<Citation> citations;
+    private Long chunkId;
+    private String docTitle;
+    private Integer pageStart;
+    private Integer pageEnd;
 }

@@ -1,21 +1,25 @@
-package com.yolo.rag.controller;
+package com.rag.app.controller;
 
-import com.yolo.rag.dto.QaRequest;
-import com.yolo.rag.dto.QaResponse;
-import com.yolo.rag.service.QaService;
+import com.rag.app.dto.QaRequest;
+import com.rag.app.dto.QaResponse;
+import com.rag.app.service.QaService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/qa")
-@RequiredArgsConstructor
-@Slf4j
+@RequestMapping("/api/qa")
 public class QaController {
 
+    private static final Logger logger = LoggerFactory.getLogger(QaController.class);
+
     private final QaService qaService;
+
+    public QaController(QaService qaService) {
+        this.qaService = qaService;
+    }
 
     /**
      * Answer a question using RAG pipeline.
@@ -25,15 +29,15 @@ public class QaController {
      */
     @PostMapping
     public ResponseEntity<QaResponse> answerQuestion(@Valid @RequestBody QaRequest request) {
-        log.info("Received QA request for question: {}", request.getQuestion());
-        log.info("Document IDs: {}", request.getDocumentIds());
+        logger.info("Received QA request for question: {}", request.getQuestion());
+        logger.info("Document IDs: {}", request.getDocumentIds());
 
         QaResponse response = qaService.answerQuestion(
                 request.getQuestion(),
                 request.getDocumentIds()
         );
 
-        log.info("Returning answer with {} citations", response.getCitations().size());
+        logger.info("Returning answer with {} citations", response.getCitations().size());
         return ResponseEntity.ok(response);
     }
 

@@ -4,7 +4,7 @@ Handles PostgreSQL connections and operations using SQLAlchemy
 """
 
 import os
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -111,7 +111,7 @@ def test_connection() -> bool:
     """
     try:
         db = get_db()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         logger.info("Database connection successful")
         return True

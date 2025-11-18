@@ -1,10 +1,12 @@
-package com.yolo.rag.service;
+package com.rag.app.service;
 
-import com.yolo.rag.dto.Citation;
-import com.yolo.rag.dto.QaResponse;
-import com.yolo.rag.entity.Chunk;
-import com.yolo.rag.repository.ChunkRepository;
-import lombok.extern.slf4j.Slf4j;
+import com.rag.app.client.EmbeddingClient;
+import com.rag.app.dto.Citation;
+import com.rag.app.dto.QaResponse;
+import com.rag.app.model.Chunk;
+import com.rag.app.repository.ChunkRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -17,8 +19,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Slf4j
 public class QaService {
+
+    private static final Logger logger = LoggerFactory.getLogger(QaService.class);
 
     private final EmbeddingClient embeddingClient;
     private final ChunkRepository chunkRepository;
@@ -55,20 +58,21 @@ public class QaService {
      * @return QaResponse with answer and citations
      */
     public QaResponse answerQuestion(String question, List<Long> documentIds) {
-        log.info("Processing question: {}", question);
-        log.info("Searching in documents: {}", documentIds);
+        logger.info("Processing question: {}", question);
+        logger.info("Searching in documents: {}", documentIds);
 
         // Step 1: Get query embedding
-        String queryEmbedding = embeddingClient.getEmbeddingAsPgVector(question);
-        log.debug("Generated query embedding");
+        float[] embedding = embeddingClient.embedSingle(question);
+        String queryEmbedding = EmbeddingClient.toPgVectorFormat(embedding);
+        logger.debug("Generated query embedding");
 
         // Step 2: Retrieve top-k nearest chunks
         List<Chunk> relevantChunks = chunkRepository.findNearestChunks(
-                queryEmbedding,
                 documentIds,
+                queryEmbedding,
                 topK
         );
-        log.info("Retrieved {} relevant chunks", relevantChunks.size());
+        logger.info("Retrieved {} relevant chunks", relevantChunks.size());
 
         if (relevantChunks.isEmpty()) {
             return QaResponse.builder()
@@ -79,14 +83,14 @@ public class QaService {
 
         // Step 3: Build context from chunks
         String context = buildContext(relevantChunks);
-        log.debug("Built context with {} characters", context.length());
+        logger.debug("Built context with {} characters", context.length());
 
         // Step 4: Build citations
         List<Citation> citations = buildCitations(relevantChunks);
 
         // Step 5: Call LLM with prompt
         String answer = callLlm(context, question);
-        log.info("Generated answer with {} characters", answer.length());
+        logger.info("Generated answer with {} characters", answer.length());
 
         return QaResponse.builder()
                 .answer(answer)
@@ -108,9 +112,9 @@ public class QaService {
             context.append(String.format("--- Source %d: %s (Pages %d-%d) ---\n",
                     i + 1,
                     docTitle,
-                    chunk.getPageStart() != null ? chunk.getPageStart() : 0,
-                    chunk.getPageEnd() != null ? chunk.getPageEnd() : 0));
-            context.append(chunk.getContent());
+                    chunk.getPageStart(),
+                    chunk.getPageEnd()));
+            context.append(chunk.getText());
             context.append("\n\n");
         }
 
@@ -163,7 +167,7 @@ public class QaService {
 
             return response != null ? response : "Unable to generate an answer.";
         } catch (Exception e) {
-            log.error("Error calling LLM: {}", e.getMessage());
+            logger.error("Error calling LLM: {}", e.getMessage());
             throw new RuntimeException("Failed to get response from LLM", e);
         }
     }
