@@ -14,8 +14,9 @@ import shutil
 
 # Import our modules
 from pdf_utils import extract_and_chunk_pdf
-from embeddings import encode_chunks, generate_embedding
+from embeddings import encode_chunks, generate_embedding, generate_embeddings_batch
 from db import ingest_document_with_chunks, test_connection, search_similar_chunks, get_db
+from model_config import EMBEDDING_DIMENSION
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -70,6 +71,17 @@ class QueryResponse(BaseModel):
     query: str
     num_results: int
     results: List[ChunkResult]
+
+
+class EmbedRequest(BaseModel):
+    texts: List[str]
+
+
+class EmbedResponse(BaseModel):
+    vectors: List[List[float]]
+    dimension: int
+    num_texts: int
+
 
 # Routes
 @app.get("/")
@@ -258,6 +270,45 @@ async def query_documents(request: QueryRequest):
     except Exception as e:
         logger.error(f"Error during query: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+
+
+@app.post("/embed", response_model=EmbedResponse)
+async def embed_texts(request: EmbedRequest):
+    """
+    Generate embeddings for a list of text strings.
+
+    This endpoint uses the same sentence-transformers model as the /ingest endpoint
+    to ensure consistent embeddings across the application.
+
+    Args:
+        request: EmbedRequest with texts to embed
+
+    Returns:
+        EmbedResponse with vectors, dimension, and count
+    """
+    logger.info(f"Received embed request for {len(request.texts)} texts")
+
+    if not request.texts:
+        raise HTTPException(status_code=400, detail="No texts provided for embedding")
+
+    try:
+        # Generate embeddings using the same model as /ingest
+        embeddings = generate_embeddings_batch(request.texts, batch_size=32)
+
+        # Convert numpy arrays to lists of floats for JSON serialization
+        vectors = [embedding.tolist() for embedding in embeddings]
+
+        logger.info(f"Generated {len(vectors)} embeddings with dimension {EMBEDDING_DIMENSION}")
+
+        return EmbedResponse(
+            vectors=vectors,
+            dimension=EMBEDDING_DIMENSION,
+            num_texts=len(vectors)
+        )
+
+    except Exception as e:
+        logger.error(f"Error during embedding: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
 
 
 if __name__ == "__main__":
