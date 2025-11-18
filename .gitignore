@@ -1,0 +1,25 @@
+# Environment files
+.env
+*.env
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Mac
+.DS_Store
+
+# Docker volumes
+postgres_data/
+python_cache/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak

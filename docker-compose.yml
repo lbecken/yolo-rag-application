@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: rag-postgres
+    environment:
+      POSTGRES_DB: ragdb
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ragpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raguser -d ragdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python service for PDF ingestion and embeddings
+  python-service:
+    build:
+      context: ./python-service
+      dockerfile: Dockerfile
+    container_name: rag-python-service
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://raguser:ragpassword@db:5432/ragdb
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - rag-network
+    volumes:
+      - ./python-service:/app
+      - python_cache:/root/.cache
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Java Spring Boot service for RAG queries and UI
+  java-service:
+    build:
+      context: ./java-service
+      dockerfile: Dockerfile
+    container_name: rag-java-service
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/ragdb
+      - SPRING_DATASOURCE_USERNAME=raguser
+      - SPRING_DATASOURCE_PASSWORD=ragpassword
+      - PYTHON_SERVICE_URL=http://python-service:8000
+    depends_on:
+      db:
+        condition: service_healthy
+      python-service:
+        condition: service_started
+    networks:
+      - rag-network
+    volumes:
+      - ./java-service:/app
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  python_cache:
