@@ -172,38 +172,76 @@ This is Phase 0 of the project: basic project structure and environment setup.
 - PostgreSQL 16 with pgvector: Vector database
 - Docker & Docker Compose: Containerization
 
-## Next Steps
+## Project Status
 
-Phase 0 is complete! The project skeleton is set up with:
+**Current Phase**: Phase 3 Complete ✅
+
+### Completed Phases:
+
+**Phase 0**: Basic Setup ✅
 - ✅ Python FastAPI service with health endpoint
 - ✅ Java Spring Boot service with health endpoint
 - ✅ PostgreSQL with pgvector extension
 - ✅ Docker Compose orchestration
 - ✅ Basic project structure
 
+**Phase 1**: Model Setup & Configuration ✅
+- ✅ Ollama service running in Docker (port 11434)
+- ✅ Embedding model configured: `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
+- ✅ Chat model configured: `llama3.2:3b` via Ollama
+- ✅ Model testing scripts and validation
+- See `PHASE1_SETUP.md` for details
+
+**Phase 2**: Database Schema & pgvector Integration ✅
+- ✅ Flyway database migrations configured
+- ✅ `documents` and `chunks` tables with proper indexes
+- ✅ HNSW index for fast vector similarity search
+- ✅ JPA entities and repositories
+- ✅ Vector similarity search queries
+- See `PHASE2_SCHEMA.md` for details
+
+**Phase 3**: PDF Ingestion Service ✅
+- ✅ PDF text extraction using PyMuPDF
+- ✅ Smart text chunking (1500 chars, 200 overlap)
+- ✅ Embedding generation pipeline
+- ✅ Database integration with transactions
+- ✅ POST /ingest endpoint
+- See `PHASE3_INGESTION.md` for details
+
+### Testing Phase 3
+
+Run the comprehensive test script:
+```bash
+python test_phase3.py
+```
+
+Or test manually:
+```bash
+# Upload a PDF
+curl -X POST "http://localhost:8000/ingest" \
+  -F "file=@/path/to/document.pdf" \
+  -F "title=My Document"
+
+# Verify in database
+docker-compose exec db psql -U raguser -d ragdb -c "SELECT * FROM documents;"
+docker-compose exec db psql -U raguser -d ragdb -c "SELECT COUNT(*) FROM chunks;"
+```
+
 ### Upcoming Phases:
 
-**Phase 1**: PDF Ingestion Pipeline
-- PDF upload endpoint
-- Text extraction and cleaning
-- Chunking with overlap
-- Embedding generation
-- Storage in vector database
+**Phase 4**: RAG Query Pipeline
+- Query endpoint accepting natural language questions
+- Vector similarity search for relevant chunks
+- Context assembly from top-k chunks
+- LLM prompt engineering
+- Answer generation with sources
 
-**Phase 2**: Vector Store & Retrieval
-- Vector similarity search
-- Metadata filtering
-- Top-k retrieval
-
-**Phase 3**: LLM Integration & RAG Pipeline
-- Local LLM setup (Ollama)
-- Prompt engineering
-- Answer generation with citations
-
-**Phase 4**: Web UI
+**Phase 5**: Web UI
 - Document management page
-- Chat interface
-- Source display
+- PDF upload interface
+- Chat/query interface
+- Source display and citations
+- Query history
 
 ## Troubleshooting
 
