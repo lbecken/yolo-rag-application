@@ -4,11 +4,11 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Create a simple test table to verify pgvector is working
-CREATE TABLE IF NOT EXISTS test_embeddings (
-    id SERIAL PRIMARY KEY,
-    content TEXT,
-    embedding vector(384)
-);
+--CREATE TABLE IF NOT EXISTS test_embeddings (
+--    id SERIAL PRIMARY KEY,
+--    content TEXT,
+--    embedding vector(384)
+--);
 
 -- Log successful initialization
 DO $$

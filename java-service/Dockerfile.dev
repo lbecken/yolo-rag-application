@@ -5,10 +5,15 @@ WORKDIR /app
 
 # Copy pom.xml and download dependencies
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+
+# Use BuildKit cache mount to persist Maven dependencies across builds
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
+##RUN mvn dependency:go-offline -B
 
 # Expose port
 EXPOSE 8080
 
-# Run the application
-ENTRYPOINT ["mvn", "spring-boot:run"]
+## Run the application
+##ENTRYPOINT ["mvn", "spring-boot:run"]
+# Run the application with cache mount for runtime dependencies
+CMD ["sh", "-c", "mvn spring-boot:run"]
