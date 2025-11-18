@@ -14,8 +14,8 @@ import shutil
 
 # Import our modules
 from pdf_utils import extract_and_chunk_pdf
-from embeddings import encode_chunks
-from db import ingest_document_with_chunks, test_connection
+from embeddings import encode_chunks, generate_embedding
+from db import ingest_document_with_chunks, test_connection, search_similar_chunks, get_db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -51,6 +51,25 @@ class IngestResponse(BaseModel):
     num_chunks: int
     title: str
 
+class ChunkResult(BaseModel):
+    chunk_id: int
+    document_id: int
+    chunk_index: int
+    page_start: Optional[int]
+    page_end: Optional[int]
+    text: str
+    distance: float 
+ 
+class QueryRequest(BaseModel):
+    query: str
+    top_k: int = 5
+    document_id: Optional[int] = None
+ 
+ 
+class QueryResponse(BaseModel):
+    query: str
+    num_results: int
+    results: List[ChunkResult]
 
 # Routes
 @app.get("/")
@@ -152,7 +171,7 @@ async def ingest_pdf(
             title=doc_title,
             chunks=chunks,
             embeddings=embeddings,
-            file_path=file.filename  # Store original filename
+            filename=file.filename  # Store original filename
         )
 
         logger.info(f"Successfully ingested document {result['document_id']}")
@@ -177,6 +196,68 @@ async def ingest_pdf(
         if temp_file and os.path.exists(temp_path):
             os.unlink(temp_path)
             logger.debug(f"Cleaned up temporary file: {temp_path}")
+
+
+@app.post("/query", response_model=QueryResponse)
+async def query_documents(request: QueryRequest):
+    """
+    Query documents using semantic search.
+ 
+    Args:
+        request: QueryRequest with query text, top_k, and optional document_id
+ 
+    Returns:
+        QueryResponse with matching chunks and distances
+    """
+    logger.info(f"Received query: '{request.query}' (top_k={request.top_k})")
+ 
+    try:
+        # Step 1: Generate embedding for query
+        logger.info("Generating query embedding...")
+        query_embedding = generate_embedding(request.query)
+        logger.info(f"Query embedded (dimension: {len(query_embedding)})")
+ 
+        # Step 2: Search for similar chunks
+        db = get_db()
+        try:
+            results = search_similar_chunks(db, query_embedding, limit=request.top_k * 2)
+ 
+            # Filter by document_id if specified
+            if request.document_id:
+                results = [(chunk, dist) for chunk, dist in results if chunk.document_id == request.document_id]
+                results = results[:request.top_k]
+                logger.info(f"Filtered to document {request.document_id}: {len(results)} results")
+            else:
+                results = results[:request.top_k]
+ 
+            # Convert to response format
+            chunk_results = [
+                ChunkResult(
+                    chunk_id=chunk.id,
+                    document_id=chunk.document_id,
+                    chunk_index=chunk.chunk_index,
+                    page_start=chunk.page_start,
+                    page_end=chunk.page_end,
+                    text=chunk.text,
+                    distance=float(distance)
+                )
+                for chunk, distance in results
+            ]
+ 
+            logger.info(f"Returning {len(chunk_results)} results")
+ 
+            return QueryResponse(
+                query=request.query,
+                num_results=len(chunk_results),
+                results=chunk_results
+            )
+ 
+        finally:
+            db.close()
+ 
+    except Exception as e:
+        logger.error(f"Error during query: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
 
 if __name__ == "__main__":

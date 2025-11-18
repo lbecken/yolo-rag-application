@@ -18,15 +18,18 @@ from model_config import EMBEDDING_DIMENSION
 
 logger = logging.getLogger(__name__)
 
-# Database configuration from environment variables
-DB_HOST = os.getenv("DB_HOST", "db")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "ragdb")
-DB_USER = os.getenv("DB_USER", "raguser")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "ragpass")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+  # Fall back  to individual environment variables
+  DB_HOST = os.getenv("DB_HOST", "db")
+  DB_PORT = os.getenv("DB_PORT", "5432")
+  DB_NAME = os.getenv("DB_NAME", "ragdb")
+  DB_USER = os.getenv("DB_USER", "raguser")
+  DB_PASSWORD = os.getenv("DB_PASSWORD", "ragpassword")
+  DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Create SQLAlchemy engine
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL, echo=False)
 
 # Create session factory
@@ -46,9 +49,8 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(500), nullable=False)
-    file_path = Column(String(1000))
-    upload_timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
-    total_chunks = Column(Integer, default=0)
+    filename = Column(String(500), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class Chunk(Base):
@@ -57,12 +59,12 @@ class Chunk(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     document_id = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+    page_start = Column(Integer, nullable=False)
+    page_end = Column(Integer, nullable=False)
     chunk_index = Column(Integer, nullable=False)
-    page_start = Column(Integer)
-    page_end = Column(Integer)
-    content = Column(Text, nullable=False)
-    embedding = Column(Vector(EMBEDDING_DIMENSION))
-
+    embedding = Column(Vector(EMBEDDING_DIMENSION), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow) 
 
 # ============================================================================
 # Database Helper Functions
@@ -125,8 +127,7 @@ def test_connection() -> bool:
 def create_document(
     db: Session,
     title: str,
-    file_path: Optional[str] = None,
-    total_chunks: int = 0
+    filename: str
 ) -> Document:
     """
     Create a new document record.
@@ -134,17 +135,15 @@ def create_document(
     Args:
         db: Database session
         title: Document title
-        file_path: Optional path to saved PDF file
-        total_chunks: Number of chunks for this document
+        filename: Original filename of the PDF
 
     Returns:
         Created Document object with ID populated
     """
     doc = Document(
         title=title,
-        file_path=file_path,
-        upload_timestamp=datetime.utcnow(),
-        total_chunks=total_chunks
+        filename=filename,
+        created_at=datetime.utcnow()
     )
     db.add(doc)
     db.flush()  # This populates doc.id without committing
@@ -177,7 +176,7 @@ def get_all_documents(db: Session, limit: int = 100) -> List[Document]:
     Returns:
         List of Document objects
     """
-    return db.query(Document).order_by(Document.upload_timestamp.desc()).limit(limit).all()
+    return db.query(Document).order_by(Document.created_at.desc()).limit(limit).all()
 
 
 # ============================================================================
@@ -215,11 +214,12 @@ def create_chunks(
 
         chunk = Chunk(
             document_id=document_id,
+            text=chunk_data["text"],
+            page_start=chunk_data.get("page_start", 0),
+            page_end=chunk_data.get("page_end", 0),
             chunk_index=chunk_data["chunk_index"],
-            page_start=chunk_data.get("page_start"),
-            page_end=chunk_data.get("page_end"),
-            content=chunk_data["text"],
-            embedding=embedding_list
+            embedding=embedding_list,
+            created_at=datetime.utcnow()
         )
         db.add(chunk)
         created_chunks.append(chunk)
@@ -280,29 +280,29 @@ def ingest_document_with_chunks(
     title: str,
     chunks: List[Dict[str, any]],
     embeddings: np.ndarray,
-    file_path: Optional[str] = None
+    filename: str
+
 ) -> Dict[str, any]:
     """
     Complete document ingestion: create document and all chunks in a single transaction.
-
+ 
     Args:
         title: Document title
         chunks: List of chunk dictionaries
         embeddings: Numpy array of embeddings
-        file_path: Optional path to saved PDF
-
+        filename: Original filename of the PDF
+ 
     Returns:
         Dictionary with keys: document_id, num_chunks, status
     """
     db = get_db()
-
+ 
     try:
         # Create document
         doc = create_document(
             db=db,
             title=title,
-            file_path=file_path,
-            total_chunks=len(chunks)
+            filename=filename
         )
 
         # Create chunks
