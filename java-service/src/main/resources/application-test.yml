@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: llama3.2
+
+# Test RAG configuration
+rag:
+  embedding:
+    url: http://localhost:11434/api/embeddings
+    model: nomic-embed-text
+  retrieval:
+    top-k: 3
+    similarity-threshold: 0.5
