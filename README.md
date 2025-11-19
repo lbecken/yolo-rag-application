@@ -249,6 +249,7 @@ The frontend will be available at http://localhost:5173 with hot module replacem
 - ✅ Embedding model configured: `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
 - ✅ Chat model configured: `llama3.2:3b` via Ollama
 - ✅ Model testing scripts and validation
+- ✅ Add Springboot hot deployment support (devtools, Dockerfile.dev)
 - See `PHASE1_SETUP.md` for details
 
 **Phase 2**: Database Schema & pgvector Integration ✅
