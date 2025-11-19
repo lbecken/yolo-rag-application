@@ -257,6 +257,14 @@ The frontend will be available at http://localhost:5173 with hot module replacem
 - ✅ POST /ingest endpoint
 - See `PHASE3_INGESTION.md` for details
 
+**Phase 4**: Python Embedding API (/embed) ✅
+
+**Phase 5**: Java Data Access and Embedding Client ✅
+
+**Phase 6**: RAG QA Service ✅
+
+**Phase 7**: Document Upload Endpoint ✅
+
 **Phase 8**: Web UI ✅
 - ✅ Vite + React frontend application
 - ✅ Document management page with list/delete
