@@ -6,8 +6,9 @@ A Retrieval-Augmented Generation (RAG) application for querying PDF documents us
 
 This project uses a hybrid architecture:
 
+- **Frontend** (`frontend/`): React + Vite web UI for document management and Q&A chat
 - **Python Service** (`python-service/`): Handles PDF ingestion, text extraction, chunking, and embedding generation
-- **Java Spring Boot Service** (`java-service/`): Provides REST API, RAG pipeline orchestration, and web UI
+- **Java Spring Boot Service** (`java-service/`): Provides REST API and RAG pipeline orchestration
 - **PostgreSQL with pgvector**: Vector database for storing document chunks and embeddings
 - **Local LLM**: For generating answers (e.g., via Ollama)
 
@@ -15,6 +16,16 @@ This project uses a hybrid architecture:
 
 ```
 yolo-rag-application/
+├── frontend/               # React + Vite web UI
+│   ├── src/
+│   │   ├── api/           # API client functions
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Page components (DocumentList, Upload, Chat)
+│   │   ├── App.jsx        # Main app with routing
+│   │   └── main.jsx       # Entry point
+│   ├── package.json
+│   ├── vite.config.js
+│   └── start.sh           # Script to start dev server
 ├── python-service/          # FastAPI service for PDF processing
 │   ├── main.py             # Main application
 │   ├── requirements.txt    # Python dependencies
@@ -40,6 +51,7 @@ yolo-rag-application/
 ## Prerequisites
 
 - Docker and Docker Compose
+- Node.js 18+ (for frontend development)
 - Java 17+ (for local development)
 - Python 3.11+ (for local development)
 - Maven 3.9+ (for local development)
@@ -65,6 +77,14 @@ This is Phase 0 of the project: basic project structure and environment setup.
    - PostgreSQL with pgvector on port 5432
    - Python service on port 8000
    - Java service on port 8080
+
+   Then start the frontend (in a separate terminal):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   - Frontend: http://localhost:5173
 
 3. **Verify services are running**
 
@@ -101,6 +121,30 @@ This is Phase 0 of the project: basic project structure and environment setup.
    - Spring Boot Actuator: http://localhost:8080/actuator/health
 
 ### Local Development Setup
+
+#### Frontend
+
+1. Navigate to frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+   Or use the start script:
+   ```bash
+   ./start.sh
+   ```
+
+The frontend will be available at http://localhost:5173 with hot module replacement enabled.
 
 #### Python Service
 
@@ -154,6 +198,11 @@ This is Phase 0 of the project: basic project structure and environment setup.
 
 ## Technology Stack
 
+### Frontend
+- React 19: UI framework
+- Vite 7: Build tool with HMR
+- React Router 7: Client-side routing
+
 ### Python Service
 - FastAPI: Web framework
 - pypdf/pdfplumber: PDF parsing
@@ -174,7 +223,7 @@ This is Phase 0 of the project: basic project structure and environment setup.
 
 ## Project Status
 
-**Current Phase**: Phase 3 Complete ✅
+**Current Phase**: Phase 8 Complete ✅
 
 ### Completed Phases:
 
@@ -208,6 +257,14 @@ This is Phase 0 of the project: basic project structure and environment setup.
 - ✅ POST /ingest endpoint
 - See `PHASE3_INGESTION.md` for details
 
+**Phase 8**: Web UI ✅
+- ✅ Vite + React frontend application
+- ✅ Document management page with list/delete
+- ✅ PDF upload interface
+- ✅ Chat/Q&A interface with citations
+- ✅ API client for Java service integration
+- ✅ CORS configuration for frontend access
+
 ### Testing Phase 3
 
 Run the comprehensive test script:
@@ -236,12 +293,11 @@ docker-compose exec db psql -U raguser -d ragdb -c "SELECT COUNT(*) FROM chunks;
 - LLM prompt engineering
 - Answer generation with sources
 
-**Phase 5**: Web UI
-- Document management page
-- PDF upload interface
-- Chat/query interface
-- Source display and citations
-- Query history
+**Future Enhancements**:
+- Query history and result caching
+- Advanced search filters
+- Multi-document conversations
+- Authentication and user management
 
 ## Troubleshooting
 
