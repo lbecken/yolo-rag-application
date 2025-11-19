@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Retrieval-Augmented Generation (RAG) application for querying PDF documents using natural language. This is a hybrid microservices architecture with Python handling PDF processing/embeddings and Java Spring Boot orchestrating queries and UI.
 
-**Current Status**: Phase 2 complete (database schema & pgvector integration). See README.md for planned phases.
+**Current Status**: Phase 8 complete (Web UI with Vite + React). See README.md for planned phases.
 
 **Phase 1 Achievements**:
 - ✅ Ollama service running in Docker (port 11434)
@@ -25,27 +25,43 @@ A Retrieval-Augmented Generation (RAG) application for querying PDF documents us
 - ✅ Test controller for verifying vector operations
 - ✅ Documentation: `PHASE2_SCHEMA.md`
 
+**Phase 8 Achievements**:
+- ✅ Vite + React 19 frontend application
+- ✅ Document management page (list, delete)
+- ✅ PDF upload interface
+- ✅ Chat/Q&A interface with citations
+- ✅ React Router for navigation
+- ✅ API client for Java service integration
+- ✅ CORS configuration for frontend access
+
 ## Architecture
 
 ### Service Responsibilities
 
-1. **Python Service** (port 8000): PDF ingestion, text extraction, chunking, and embedding generation
+1. **Frontend** (port 5173): Web UI for document management and Q&A
+   - Vite + React 19 application in `frontend/`
+   - React Router for navigation between pages
+   - API client connects to Java service
+   - Pages: DocumentList (home), Upload, Chat
+
+2. **Python Service** (port 8000): PDF ingestion, text extraction, chunking, and embedding generation
    - FastAPI application in `python-service/main.py`
-   - Will use sentence-transformers for embeddings (384-dimensional vectors)
+   - Uses sentence-transformers for embeddings (384-dimensional vectors)
    - Communicates with PostgreSQL for vector storage
 
-2. **Java Service** (port 8080): RAG pipeline orchestration, REST API, and web UI
+3. **Java Service** (port 8080): RAG pipeline orchestration and REST API
    - Spring Boot 3.2 application (Java 17)
    - Main class: `com.rag.app.RagApplication`
    - Uses WebClient for HTTP calls to Python service and LLM
    - JPA/Hibernate for database access
+   - CORS enabled for frontend access
 
-3. **PostgreSQL with pgvector** (port 5432): Vector database
+4. **PostgreSQL with pgvector** (port 5432): Vector database
    - Database: `ragdb`, User: `raguser`
    - Extension: pgvector enabled
    - Initialized via `infrastructure/init-db.sql`
 
-4. **Ollama** (port 11434): Local LLM inference service
+5. **Ollama** (port 11434): Local LLM inference service
    - Docker service: `ollama/ollama:latest`
    - Hosts the chat model: `llama3.2:3b`
    - API endpoint: `http://ollama:11434` (in Docker) or `http://localhost:11434` (local)
@@ -67,10 +83,24 @@ docker-compose up --build
 ```
 
 Services will be available at:
+- Frontend: http://localhost:5173
 - Python service: http://localhost:8000 (docs at /docs)
 - Java service: http://localhost:8080
 - PostgreSQL: localhost:5432
 - Ollama: http://localhost:11434 (API at /api)
+
+### Frontend (Local Development)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Or use the start script:
+```bash
+./start.sh
+```
 
 ### Python Service (Local Development)
 
@@ -175,6 +205,9 @@ See `PHASE2_SCHEMA.md` for detailed Phase 2 setup and testing instructions.
 ## Key Configuration Files
 
 - `docker-compose.yml`: Service orchestration with volumes (postgres_data, python_cache, ollama-data, maven-cache)
+- `frontend/package.json`: Frontend dependencies (React 19, Vite, React Router)
+- `frontend/vite.config.js`: Vite configuration
+- `frontend/src/api/api.js`: API client for Java service (configurable via `VITE_API_URL` env var)
 - `python-service/model_config.py`: **Model configuration** - embedding and LLM model names, dimensions, parameters
 - `python-service/requirements.txt`: Python dependencies (FastAPI, sentence-transformers, ollama, pypdf, etc.)
 - `python-service/test_models.py`: Test script for Phase 1 model validation
@@ -190,7 +223,10 @@ See `PHASE2_SCHEMA.md` for detailed Phase 2 setup and testing instructions.
 The database is configured for 384-dimensional embeddings (matching sentence-transformers' default model). See `infrastructure/init-db.sql:10`.
 
 ### CORS Configuration
-Python service has CORS enabled for all origins in `main.py:24-30`. In production, this should be restricted to specific origins.
+Python service has CORS enabled for all origins in `main.py:24-30`. Java service also has CORS enabled for frontend access. In production, these should be restricted to specific origins.
+
+### Frontend API Configuration
+The frontend API base URL defaults to `http://localhost:8080/api` but can be configured via the `VITE_API_URL` environment variable. See `frontend/src/api/api.js`.
 
 ### JPA Configuration
 Hibernate DDL is set to `validate` in `application.properties:12`. Database schema is managed by Flyway migrations in `java-service/src/main/resources/db/migration/`. This ensures version-controlled, reproducible schema changes.
@@ -210,7 +246,7 @@ Other volumes:
 
 ## Implementation Status
 
-### ✅ Completed (Phase 0, 1 & 2)
+### ✅ Completed (Phase 0, 1, 2, 3 & 8)
 - ✅ PostgreSQL with pgvector
 - ✅ Python FastAPI service structure
 - ✅ Java Spring Boot service structure
@@ -225,18 +261,24 @@ Other volumes:
 - ✅ JPA entities and repositories
 - ✅ Vector similarity search queries
 - ✅ Vector operations test controller
+- ✅ PDF upload and ingestion endpoints
+- ✅ Text chunking and embedding generation
+- ✅ Vite + React frontend application
+- ✅ Document management UI (list, upload, delete)
+- ✅ Chat/Q&A interface with citations
+- ✅ CORS configuration for frontend
 
-### 🔄 Planned (Phase 3+)
-- PDF upload and ingestion endpoints
-- Text chunking and embedding generation
+### 🔄 Planned (Phase 4+)
 - RAG query pipeline (combining retrieval + generation)
-- Web UI for document upload and queries
 - Query history and result caching
+- Advanced search filters
+- Authentication and user management
 
 When implementing new features, refer to the phase plan in README.md.
 
 ## Health Check Endpoints
 
+- Frontend: http://localhost:5173 (Vite dev server)
 - Python service: `GET http://localhost:8000/health`
 - Java service: `GET http://localhost:8080/api/health`
 - Spring Actuator: `GET http://localhost:8080/actuator/health`
