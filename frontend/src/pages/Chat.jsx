@@ -91,9 +91,10 @@ function Chat() {
     }
   }
 
-  function getDocumentTitle(docId) {
-    const doc = documents.find(d => d.id === docId);
-    return doc ? doc.title : `Document ${docId}`;
+  function formatPageRange(pageStart, pageEnd) {
+    if (!pageStart && !pageEnd) return null;
+    if (pageStart === pageEnd || !pageEnd) return `Page ${pageStart}`;
+    return `Pages ${pageStart}-${pageEnd}`;
   }
 
   function clearChat() {
@@ -157,20 +158,17 @@ function Chat() {
 
                 {msg.type === 'assistant' && msg.citations && msg.citations.length > 0 && (
                   <div className="citations">
-                    <strong>Citations:</strong>
+                    <strong>Sources:</strong>
                     <ul>
                       {msg.citations.map((citation, citIndex) => (
                         <li key={citIndex}>
                           <span className="citation-doc">
-                            {getDocumentTitle(citation.documentId)}
+                            {citation.docTitle || 'Unknown document'}
                           </span>
-                          {citation.pageNumber && (
+                          {formatPageRange(citation.pageStart, citation.pageEnd) && (
                             <span className="citation-page">
-                              {' '}(Page {citation.pageNumber})
+                              {' '}({formatPageRange(citation.pageStart, citation.pageEnd)})
                             </span>
-                          )}
-                          {citation.content && (
-                            <p className="citation-text">"{citation.content}"</p>
                           )}
                         </li>
                       ))}
