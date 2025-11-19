@@ -70,13 +70,14 @@ This is Phase 0 of the project: basic project structure and environment setup.
 
 2. **Start all services**
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
    This will start:
    - PostgreSQL with pgvector on port 5432
    - Python service on port 8000
    - Java service on port 8080
+   - Ollama on port 11434
 
    Then start the frontend (in a separate terminal):
    ```bash
@@ -158,6 +159,14 @@ The frontend will be available at http://localhost:5173 with hot module replacem
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
+   
+   OR
+
+   use conda:
+   ```bash
+   conda create -n yolo-rag-application python=3.11
+   conda activate yolo-rag-application
+   ```
 
 3. Install dependencies:
    ```bash
@@ -211,7 +220,8 @@ The frontend will be available at http://localhost:5173 with hot module replacem
 - PostgreSQL: Database connectivity
 
 ### Java Service
-- Spring Boot 3.2: Application framework
+- Spring Boot 3.3: Application framework
+- Flyway: Database migration tool
 - Spring Data JPA: Database access
 - PostgreSQL: Database
 - Apache PDFBox: PDF processing (alternative)
@@ -288,8 +298,8 @@ curl -X POST "http://localhost:8000/ingest" \
   -F "title=My Document"
 
 # Verify in database
-docker-compose exec db psql -U raguser -d ragdb -c "SELECT * FROM documents;"
-docker-compose exec db psql -U raguser -d ragdb -c "SELECT COUNT(*) FROM chunks;"
+docker compose exec db psql -U raguser -d ragdb -c "SELECT * FROM documents;"
+docker compose exec db psql -U raguser -d ragdb -c "SELECT COUNT(*) FROM chunks;"
 ```
 
 ### Upcoming Phases:
@@ -312,11 +322,11 @@ docker-compose exec db psql -U raguser -d ragdb -c "SELECT COUNT(*) FROM chunks;
 ### Services won't start
 - Ensure Docker is running
 - Check ports 5432, 8000, and 8080 are available
-- Run `docker-compose logs` to see error messages
+- Run `docker compose logs` to see error messages
 
 ### Database connection issues
-- Wait for PostgreSQL to be fully initialized (check with `docker-compose logs db`)
-- Verify pgvector extension is installed: `docker-compose exec db psql -U raguser -d ragdb -c "SELECT * FROM pg_extension WHERE extname='vector';"`
+- Wait for PostgreSQL to be fully initialized (check with `docker compose logs db`)
+- Verify pgvector extension is installed: `docker compose exec db psql -U raguser -d ragdb -c "SELECT * FROM pg_extension WHERE extname='vector';"`
 
 ### Python service issues
 - Check Python version: `python --version` (should be 3.11+)
